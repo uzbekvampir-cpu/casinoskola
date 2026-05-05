@@ -1,107 +1,688 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roulette Game</title>
-    <script src="https://telegram.org"></script>
-    <style>
-        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 10px; overflow: hidden; }
-        .balance-box { font-size: 20px; font-weight: bold; color: #ffd700; background: #2c3e50; padding: 10px; border-radius: 15px; margin-bottom: 10px; }
-        
-        #wheel-container { position: relative; width: 320px; height: 320px; margin: 10px auto; border: 5px solid #5d4037; border-radius: 50%; background: #3e2723; }
-        canvas { width: 100%; height: 100%; transition: transform 6s cubic-bezier(0.1, 0, 0.1, 1); border-radius: 50%; }
-        
-        #pointer { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 35px solid #ffd700; z-index: 10; }
-        #center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: radial-gradient(circle, #f1c40f, #d4af37); border-radius: 50%; z-index: 5; border: 2px solid #3e2723; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casino Roulette</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Cormorant+Garamond:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --gold-dark: #8a6a1f;
+    --felt: #0d3d1f;
+    --felt-light: #1a5c30;
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --red: #c0392b;
+    --black: #1a1a1a;
+    --text: #f0e6cc;
+    --text-dim: #8a7a5a;
+  }
 
-        .ui { background: #2c3e50; padding: 15px; border-radius: 20px; margin-top: 10px; }
-        .inputs { display: flex; justify-content: space-around; margin-bottom: 10px; }
-        input { width: 80px; padding: 10px; border-radius: 8px; border: none; font-size: 18px; text-align: center; }
-        button { background: #ffd700; color: #000; border: none; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 15px; width: 100%; cursor: pointer; }
-        button:disabled { background: #7f8c8d; }
-    </style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cormorant Garamond', serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(201,168,76,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(13,61,31,0.3) 0%, transparent 60%);
+  }
+
+  header {
+    text-align: center;
+    padding: 36px 20px 10px;
+    letter-spacing: 0.25em;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(201,168,76,0.4);
+    letter-spacing: 0.2em;
+  }
+  header p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .divider {
+    width: 180px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+    margin: 12px auto;
+  }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    padding: 0 16px 60px;
+    width: 100%;
+    max-width: 780px;
+  }
+
+  /* BALANCE */
+  .balance-bar {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    background: linear-gradient(135deg, #161616, #1e1e1e);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 4px;
+    padding: 16px 32px;
+    width: 100%;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+  }
+  .balance-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .balance-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(201,168,76,0.3);
+    margin-left: auto;
+  }
+  .balance-value span { font-size: 1rem; margin-right: 4px; opacity: 0.7; }
+
+  /* WHEEL CONTAINER */
+  .wheel-wrap {
+    position: relative;
+    width: 340px;
+    height: 340px;
+    filter: drop-shadow(0 0 40px rgba(201,168,76,0.15));
+  }
+
+  canvas#wheelCanvas {
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+  }
+
+  /* NEEDLE */
+  .needle {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 28px solid var(--gold);
+    filter: drop-shadow(0 2px 6px rgba(201,168,76,0.7));
+    z-index: 10;
+  }
+
+  /* CENTER CIRCLE */
+  .wheel-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #2a2a2a, #111);
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 20px rgba(201,168,76,0.4), inset 0 0 10px rgba(0,0,0,0.7);
+    z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    text-align: center;
+  }
+
+  /* BET PANEL */
+  .bet-panel {
+    width: 100%;
+    background: linear-gradient(135deg, #141414, #1c1c1c);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: 4px;
+    padding: 24px 28px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+  }
+  .bet-panel h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+
+  /* NUMBER GRID */
+  .number-grid {
+    display: grid;
+    grid-template-columns: repeat(13, 1fr);
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+  .num-btn {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: #222;
+    color: #ddd;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(9px, 1.3vw, 13px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  .num-btn:hover { transform: scale(1.12); z-index: 2; }
+  .num-btn.red { background: #7a1a11; border-color: #c0392b; color: #ffcccc; }
+  .num-btn.black { background: #1a1a1a; border-color: #444; color: #ddd; }
+  .num-btn.zero { background: var(--felt); border-color: var(--gold); color: var(--gold); grid-column: span 2; aspect-ratio: auto; padding: 6px 0; }
+  .num-btn.selected {
+    box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(201,168,76,0.6);
+    color: var(--gold) !important;
+    transform: scale(1.1);
+    z-index: 3;
+  }
+  .num-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* STAKE ROW */
+  .stake-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .stake-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .stake-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: 3px dashed;
+    background: transparent;
+    font-family: 'Playfair Display', serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+  }
+  .chip-1   { border-color: #aaa; color: #aaa; }
+  .chip-5   { border-color: #e74c3c; color: #e74c3c; }
+  .chip-10  { border-color: #3498db; color: #3498db; }
+  .chip-25  { border-color: #2ecc71; color: #2ecc71; }
+  .chip-100 { border-color: var(--gold); color: var(--gold); }
+  .chip:hover { transform: scale(1.12); filter: brightness(1.3); }
+  .chip.active { filter: brightness(1.4); box-shadow: 0 0 12px currentColor; }
+  .chip:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .stake-display {
+    margin-left: auto;
+    display: flex; flex-direction: column; align-items: flex-end;
+  }
+  .stake-display small {
+    font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim);
+  }
+  .stake-amount {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--gold-light);
+  }
+
+  /* SPIN BUTTON */
+  .spin-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+    border: none;
+    border-radius: 3px;
+    color: #0a0a0a;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 24px rgba(201,168,76,0.25);
+  }
+  .spin-btn:hover:not(:disabled) {
+    box-shadow: 0 6px 36px rgba(201,168,76,0.45);
+    letter-spacing: 0.4em;
+  }
+  .spin-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    letter-spacing: 0.3em;
+  }
+
+  /* RESULT TOAST */
+  .result-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: #111;
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    padding: 32px 52px;
+    text-align: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.35s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 0 80px rgba(201,168,76,0.2);
+  }
+  .result-toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+  }
+  .result-toast .landed {
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .result-toast .big-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .result-toast .big-num.win { color: var(--gold); text-shadow: 0 0 30px rgba(201,168,76,0.6); }
+  .result-toast .big-num.lose { color: #888; }
+  .result-toast .verdict {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+  }
+  .result-toast .verdict.win { color: var(--gold); }
+  .result-toast .verdict.lose { color: #888; }
+  .result-toast .payout {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+  }
+  .result-toast button {
+    margin-top: 20px;
+    padding: 10px 36px;
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.25em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .result-toast button:hover { background: rgba(201,168,76,0.1); }
+
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 99;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .overlay.show { opacity: 1; pointer-events: auto; }
+
+  @media(max-width:520px){
+    .number-grid { grid-template-columns: repeat(10, 1fr); }
+    .balance-bar { padding: 12px 18px; }
+    .balance-value { font-size: 1.5rem; }
+    .chip { width: 36px; height: 36px; font-size: 0.6rem; }
+  }
+</style>
 </head>
 <body>
-    <div class="balance-box">Баланс: <span id="val">1000</span> 💰</div>
-    
-    <div id="wheel-container">
-        <div id="pointer"></div>
-        <div id="center"></div>
-        <canvas id="canvas" width="600" height="600"></canvas>
+
+<header>
+  <h1>ROULETTE</h1>
+  <p>European · Single Zero</p>
+  <div class="divider"></div>
+</header>
+
+<div class="main">
+
+  <div class="balance-bar">
+    <div>
+      <div class="balance-label">Баланс</div>
+    </div>
+    <div class="balance-value"><span>₽</span><span id="balVal">1 000</span></div>
+  </div>
+
+  <!-- WHEEL -->
+  <div class="wheel-wrap">
+    <div class="needle"></div>
+    <canvas id="wheelCanvas" width="680" height="680"></canvas>
+    <div class="wheel-center">ROYAL<br>SPIN</div>
+  </div>
+
+  <!-- BET PANEL -->
+  <div class="bet-panel">
+    <h2>Сделать ставку</h2>
+
+    <div class="number-grid" id="numberGrid"></div>
+
+    <div class="stake-row">
+      <span class="stake-label">Фишка</span>
+      <div class="stake-chips" id="chipRow"></div>
+      <div class="stake-display">
+        <small>Ставка</small>
+        <div class="stake-amount">₽<span id="stakeVal">0</span></div>
+      </div>
     </div>
 
-    <div class="ui">
-        <div class="inputs">
-            <div><label>ЧИСЛО</label><br><input type="number" id="num" min="0" max="36" value="7"></div>
-            <div><label>СТАВКА</label><br><input type="number" id="amt" min="10" value="100"></div>
-        </div>
-        <button id="spin-btn">ИГРАТЬ 🎰</button>
-    </div>
+    <button class="spin-btn" id="spinBtn" disabled>КРУТИТЬ КОЛЕСО</button>
+  </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+</div>
 
-        // Генерируем массив чисел (европейская рулетка)
-        const sectors = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
-        const arc = 2 * Math.PI / sectors.length;
-        let rotation = 0;
+<!-- OVERLAY + TOAST -->
+<div class="overlay" id="overlay"></div>
+<div class="result-toast" id="resultToast">
+  <div class="landed">Выпало число</div>
+  <div class="big-num" id="toastNum">—</div>
+  <div class="verdict" id="toastVerdict"></div>
+  <div class="payout" id="toastPayout"></div>
+  <button id="toastClose">Продолжить</button>
+</div>
 
-        // Получаем баланс из параметров ссылки
-        const params = new URLSearchParams(window.location.search);
-        document.getElementById('val').innerText = params.get('balance') || '1000';
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────────
+const RED_NUMS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+// European wheel order (clockwise from top)
+const WHEEL_ORDER = [
+  0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,
+  5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26
+];
+const SECTOR_COUNT = 37;
+const SECTOR_ANGLE = (2 * Math.PI) / SECTOR_COUNT;
 
-        function draw() {
-            const cx = 300, cy = 300, r = 280;
-            ctx.clearRect(0, 0, 600, 600);
-            
-            for (let i = 0; i < sectors.length; i++) {
-                const angle = i * arc;
-                ctx.beginPath();
-                ctx.fillStyle = sectors[i] === 0 ? "#27ae60" : (i % 2 === 0 ? "#c0392b" : "#1a1a1a");
-                ctx.moveTo(cx, cy);
-                ctx.arc(cx, cy, r, angle, angle + arc);
-                ctx.fill();
-                ctx.strokeStyle = "#ffd700";
-                ctx.lineWidth = 2;
-                ctx.stroke();
+// ── STATE ───────────────────────────────────────────────────────────────────
+let balance = 1000;
+let selectedNumber = null;
+let chipValue = 0;
+let betAmount = 0;
+let spinning = false;
+let wheelAngle = 0; // current rotation in radians
 
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(angle + arc / 2);
-                ctx.textAlign = "right";
-                ctx.fillStyle = "#fff";
-                ctx.font = "bold 22px Arial";
-                ctx.fillText(sectors[i].toString(), r - 25, 10);
-                ctx.restore();
-            }
-        }
+// ── CANVAS ──────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const CX = 340, CY = 340, R = 320;
 
-        window.onload = draw;
+function numColor(n) {
+  if (n === 0) return { fill:'#0d6b2e', text:'#fff' };
+  return RED_NUMS.has(n)
+    ? { fill:'#8b1a10', text:'#ffd5d0' }
+    : { fill:'#1a1a1a', text:'#e8e8e8' };
+}
 
-        document.getElementById('spin-btn').onclick = function() {
-            this.disabled = true;
-            const extra = 2160 + Math.floor(Math.random() * 360); // Минимум 6 полных кругов
-            rotation += extra;
-            canvas.style.transform = `rotate(${-rotation}deg)`;
+function drawWheel(angle) {
+  ctx.clearRect(0, 0, 680, 680);
 
-            setTimeout(() => {
-                const netRot = rotation % 360;
-                const sectorDeg = 360 / sectors.length;
-                // Сдвиг на 270 градусов, так как 0-й сектор рисуется справа, а стрелка сверху
-                const winIdx = Math.floor(((netRot + 270) % 360) / sectorDeg);
-                
-                tg.sendData(JSON.stringify({
-                    number: document.getElementById('num').value,
-                    amount: document.getElementById('amt').value,
-                    win: sectors[winIdx]
-                }));
-                this.disabled = false;
-            }, 6000);
-        };
-        tg.expand();
-    </script>
+  // outer rim
+  ctx.save();
+  const rim = ctx.createRadialGradient(CX,CY,R-12,CX,CY,R+12);
+  rim.addColorStop(0,'#8a6a1f');
+  rim.addColorStop(0.5,'#e8c97a');
+  rim.addColorStop(1,'#5a4010');
+  ctx.beginPath(); ctx.arc(CX,CY,R+16,0,Math.PI*2);
+  ctx.fillStyle = rim; ctx.fill();
+  ctx.restore();
+
+  // sectors
+  for (let i = 0; i < SECTOR_COUNT; i++) {
+    const startA = angle + i * SECTOR_ANGLE - SECTOR_ANGLE / 2;
+    const endA   = startA + SECTOR_ANGLE;
+    const n = WHEEL_ORDER[i];
+    const col = numColor(n);
+
+    // fill
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, startA, endA);
+    ctx.closePath();
+    ctx.fillStyle = col.fill;
+    ctx.fill();
+
+    // border line
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, startA, endA);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(201,168,76,0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // number label
+    const midA = startA + SECTOR_ANGLE / 2;
+    const textR = R * 0.82;
+    const tx = CX + textR * Math.cos(midA);
+    const ty = CY + textR * Math.sin(midA);
+
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(midA + Math.PI / 2);
+    ctx.fillStyle = col.text;
+    ctx.font = 'bold 18px "Cormorant Garamond", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(n), 0, 0);
+    ctx.restore();
+  }
+
+  // inner shadow ring
+  const innerGrad = ctx.createRadialGradient(CX,CY,R*0.55,CX,CY,R*0.72);
+  innerGrad.addColorStop(0,'rgba(0,0,0,0.6)');
+  innerGrad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.arc(CX,CY,R*0.72,0,Math.PI*2);
+  ctx.fillStyle = innerGrad; ctx.fill();
+
+  // track ring
+  ctx.beginPath(); ctx.arc(CX,CY,R*0.65,0,Math.PI*2);
+  ctx.strokeStyle = 'rgba(201,168,76,0.35)'; ctx.lineWidth = 3; ctx.stroke();
+}
+
+drawWheel(0);
+
+// ── UI BUILD ─────────────────────────────────────────────────────────────────
+const grid = document.getElementById('numberGrid');
+
+// zero (wide)
+const z = document.createElement('button');
+z.className = 'num-btn zero';
+z.textContent = '0';
+z.dataset.n = '0';
+grid.appendChild(z);
+
+// 1-36
+for (let n = 1; n <= 36; n++) {
+  const b = document.createElement('button');
+  b.className = 'num-btn ' + (RED_NUMS.has(n) ? 'red' : 'black');
+  b.textContent = n;
+  b.dataset.n = n;
+  grid.appendChild(b);
+}
+
+grid.addEventListener('click', e => {
+  const btn = e.target.closest('.num-btn');
+  if (!btn || spinning) return;
+  document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedNumber = parseInt(btn.dataset.n);
+  updateSpinBtn();
+});
+
+// Chips
+const CHIPS = [1, 5, 10, 25, 100];
+const chipRow = document.getElementById('chipRow');
+CHIPS.forEach(v => {
+  const c = document.createElement('button');
+  c.className = `chip chip-${v}`;
+  c.textContent = v;
+  c.dataset.v = v;
+  chipRow.appendChild(c);
+});
+
+chipRow.addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip || spinning) return;
+  chipValue = parseInt(chip.dataset.v);
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+
+  // set bet to chip value (replace, not add)
+  const newBet = chipValue;
+  if (newBet > balance) return;
+  betAmount = newBet;
+  document.getElementById('stakeVal').textContent = betAmount;
+  updateSpinBtn();
+});
+
+function updateSpinBtn() {
+  const btn = document.getElementById('spinBtn');
+  btn.disabled = (selectedNumber === null || betAmount === 0 || spinning);
+}
+
+function updateBalance() {
+  document.getElementById('balVal').textContent = balance.toLocaleString('ru-RU');
+}
+
+// ── SPIN ─────────────────────────────────────────────────────────────────────
+document.getElementById('spinBtn').addEventListener('click', doSpin);
+
+function doSpin() {
+  if (spinning || selectedNumber === null || betAmount === 0) return;
+  if (betAmount > balance) return;
+
+  spinning = true;
+  balance -= betAmount;
+  updateBalance();
+  setUIDisabled(true);
+
+  // pick winning number
+  const winNumber = Math.floor(Math.random() * 37); // 0-36
+
+  // find index in WHEEL_ORDER
+  const winIdx = WHEEL_ORDER.indexOf(winNumber);
+
+  // target angle: needle is at top (angle = -π/2 from canvas perspective)
+  // sector i is centered at: wheelAngle + i*SECTOR_ANGLE
+  // we want sector winIdx centered at -π/2 (top)
+  // => wheelAngle + winIdx*SECTOR_ANGLE = -π/2 + 2πk
+  // pick k so total spin >= 4 full rotations + some
+  const targetSectorAngle = -Math.PI / 2 - winIdx * SECTOR_ANGLE;
+  const extraSpins = 4 + Math.random() * 2; // 4-6 full rotations
+  const finalAngle = targetSectorAngle - extraSpins * 2 * Math.PI;
+
+  // normalize current angle
+  const startAngle = wheelAngle;
+  const duration = 6000; // 6 seconds
+  const startTime = performance.now();
+
+  function easeOut(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const eased = easeOut(t);
+    wheelAngle = startAngle + (finalAngle - startAngle) * eased;
+    drawWheel(wheelAngle);
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      wheelAngle = finalAngle;
+      drawWheel(wheelAngle);
+      spinning = false;
+      showResult(winNumber);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function showResult(winNumber) {
+  const won = winNumber === selectedNumber;
+  const payout = won ? betAmount * 36 : 0;
+  if (won) balance += payout;
+  updateBalance();
+
+  const col = numColor(winNumber);
+  const toastNum = document.getElementById('toastNum');
+  toastNum.textContent = winNumber;
+  toastNum.className = 'big-num ' + (won ? 'win' : 'lose');
+  toastNum.style.color = won ? '' : (winNumber === 0 ? '#4caf50' : (RED_NUMS.has(winNumber) ? '#c0392b' : '#888'));
+
+  const verdict = document.getElementById('toastVerdict');
+  verdict.textContent = won ? '🏆 Победа!' : 'Не повезло';
+  verdict.className = 'verdict ' + (won ? 'win' : 'lose');
+
+  const payoutEl = document.getElementById('toastPayout');
+  if (won) {
+    payoutEl.textContent = `+₽${payout.toLocaleString('ru-RU')} · ставка ×36`;
+  } else {
+    payoutEl.textContent = `Вы поставили на ${selectedNumber}, выпало ${winNumber}`;
+  }
+
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('resultToast').classList.add('show');
+}
+
+document.getElementById('toastClose').addEventListener('click', () => {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('resultToast').classList.remove('show');
+  // reset bet selection
+  selectedNumber = null;
+  betAmount = 0;
+  chipValue = 0;
+  document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('stakeVal').textContent = '0';
+  setUIDisabled(false);
+  updateSpinBtn();
+
+  if (balance <= 0) {
+    balance = 1000;
+    updateBalance();
+  }
+});
+
+function setUIDisabled(v) {
+  document.querySelectorAll('.num-btn, .chip').forEach(b => b.disabled = v);
+  document.getElementById('spinBtn').disabled = v;
+}
+</script>
 </body>
 </html>
