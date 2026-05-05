@@ -215,9 +215,9 @@ function dis(v){document.querySelectorAll(".nb,.chip").forEach(b=>b.disabled=v);
 const u=tg.initDataUnsafe?.user;
 document.getElementById("uname").textContent=u?.first_name||u?.username||"Игрок";
  
-// Баланс ВСЕГДА берём от бота через start_param — localStorage больше не используется
-const sp=tg.initDataUnsafe?.start_param;
-bal=sp?.startsWith("bal_")?+sp.replace("bal_",""):0;
+// Баланс берём из обычного query-параметра ?bal=XXX который бот вставляет в URL
+const urlParams = new URLSearchParams(window.location.search);
+bal = parseInt(urlParams.get("bal")) || 0;
 updBal();upd();
 </script>
 </body>
