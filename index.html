@@ -149,7 +149,7 @@ document.getElementById("chips").addEventListener("click",e=>{
 });
  
 function upd(){document.getElementById("spin").disabled=selNum===null||bet===0||spinning||bet>bal;}
-function updBal(){document.getElementById("balv").textContent=bal.toLocaleString("ru-RU");}
+function updBal(){document.getElementById("balv").textContent=bal.toLocaleString("ru-RU");localStorage.setItem("rb",bal);}
  
 document.getElementById("spin").addEventListener("click",()=>{
   if(spinning||selNum===null||bet===0||bet>bal)return;
@@ -170,7 +170,7 @@ document.getElementById("spin").addEventListener("click",()=>{
 function result(win){
   const won=win===selNum,pay=won?bet*36:0;
   if(won){bal+=pay;updBal();}
-  window._pr={bet,won,pay,number:win,chosen:selNum,new_balance:bal};
+  window._pr={bet,won,pay,number:win,chosen:selNum};
   document.getElementById("tnum").textContent=win;
   document.getElementById("tnum").className="t-num "+(won?"w":"l");
   document.getElementById("tverd").textContent=won?"🏆 Победа!":"Не повезло";
@@ -183,25 +183,12 @@ function result(win){
 document.getElementById("tbtn").addEventListener("click",()=>{
   document.getElementById("ov").classList.remove("on");
   document.getElementById("toast").classList.remove("on");
- 
-  // Сразу отправляем результат боту — он сам пересчитает и сохранит баланс
   if(window._pr){
-    const r=window._pr;
-    const payload=JSON.stringify({
-      action:"spin_result",
-      bet:r.bet,
-      won:r.won,
-      payout:r.pay,
-      number:r.number,
-      chosen:r.chosen,
-      new_balance:r.new_balance
-    });
-    tg.sendData(payload);   // закроет Mini App и передаст данные боту
+    const r=window._pr,p=JSON.stringify({action:"spin_result",bet:r.bet,won:r.won,payout:r.pay,number:r.number,chosen:r.chosen,new_balance:bal});
+    tg.MainButton.setText("Сохранить результат");tg.MainButton.show();
+    tg.MainButton.onClick(()=>{tg.sendData(p);tg.MainButton.hide();});
     window._pr=null;
-    return;                 // дальнейший сброс не нужен — окно закрывается
   }
- 
-  // Если данных не было — просто сброс UI
   selNum=null;bet=0;
   document.querySelectorAll(".nb").forEach(b=>b.classList.remove("sel"));
   document.querySelectorAll(".chip").forEach(c=>c.classList.remove("on"));
@@ -212,13 +199,10 @@ document.getElementById("tbtn").addEventListener("click",()=>{
  
 function dis(v){document.querySelectorAll(".nb,.chip").forEach(b=>b.disabled=v);document.getElementById("spin").disabled=v;}
  
-// Имя пользователя
 const u=tg.initDataUnsafe?.user;
 document.getElementById("uname").textContent=u?.first_name||u?.username||"Игрок";
- 
-// Баланс берём из обычного query-параметра ?bal=XXX который бот вставляет в URL
-const urlParams = new URLSearchParams(window.location.search);
-bal = parseInt(urlParams.get("bal")) || 0;
+const sp=tg.initDataUnsafe?.start_param;
+bal=sp?.startsWith("bal_")?+sp.replace("bal_",""):+localStorage.getItem("rb")||1000;
 updBal();upd();
 </script>
 </body>
