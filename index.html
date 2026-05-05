@@ -153,7 +153,7 @@ function updBal(){document.getElementById("balv").textContent=bal.toLocaleString
  
 document.getElementById("spin").addEventListener("click",()=>{
   if(spinning||selNum===null||bet===0||bet>bal)return;
-  spinning=true;bal-=bet;updBal();dis(true);
+  spinning=true;dis(true);
   const win=Math.floor(Math.random()*37);
   const idx=ORD.indexOf(win);
   const fa=(-Math.PI/2-idx*SA-SA/2)-(4+Math.random()*2)*Math.PI*2;
@@ -169,9 +169,7 @@ document.getElementById("spin").addEventListener("click",()=>{
  
 function result(win){
   const won=win===selNum,pay=won?bet*36:0;
-  // Показываем результат в UI (баланс уже скорректирован выше при ставке)
-  // при победе добавляем выплату
-  if(won){bal+=pay;updBal();}
+  // Баланс НЕ меняем в HTML — только бот считает и сохраняет
   window._pr={bet,won,pay,number:win,chosen:selNum};
   document.getElementById("tnum").textContent=win;
   document.getElementById("tnum").className="t-num "+(won?"w":"l");
