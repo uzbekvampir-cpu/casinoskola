@@ -10,13 +10,9 @@
 body{background:#0f0f0f;color:#eee;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:12px 12px 40px}
 h1{font-size:1.4rem;letter-spacing:.2em;color:#c9a84c;margin:8px 0 2px}
 .sub{font-size:.65rem;color:#666;letter-spacing:.3em;margin-bottom:12px}
-.bar{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:440px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;margin-bottom:8px}
+.bar{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:440px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;margin-bottom:12px}
 .bar .name{font-size:.8rem;color:#aaa}
 .bar .bal{font-size:1.4rem;color:#c9a84c;font-weight:700}
-.statsbar{display:flex;gap:12px;width:100%;max-width:440px;margin-bottom:12px}
-.stat{flex:1;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:8px;text-align:center}
-.stat .sv{font-size:1rem;font-weight:700;color:#c9a84c}
-.stat .sl{font-size:.55rem;color:#555;letter-spacing:.2em;text-transform:uppercase;margin-top:2px}
 .wheel-wrap{position:relative;width:min(260px,80vw);height:min(260px,80vw);margin-bottom:14px}
 canvas{width:100%;height:100%}
 .needle{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:22px solid #c9a84c;filter:drop-shadow(0 0 4px #c9a84c);z-index:5}
@@ -42,14 +38,6 @@ canvas{width:100%;height:100%}
 .spin{width:100%;margin-top:12px;padding:13px;background:linear-gradient(135deg,#7a5a10,#c9a84c,#7a5a10);border:none;border-radius:4px;color:#0f0f0f;font-size:.85rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:.15s}
 .spin:active:not(:disabled){transform:scale(.97)}
 .spin:disabled{opacity:.4;cursor:not-allowed}
-/* History panel */
-.hist-panel{width:100%;max-width:440px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:14px;margin-top:10px}
-.hist-list{max-height:160px;overflow-y:auto}
-.hist-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #222;font-size:.72rem}
-.hist-row:last-child{border-bottom:none}
-.hist-row .hw{color:#c9a84c}.hist-row .hl{color:#555}
-.hist-empty{font-size:.7rem;color:#444;text-align:center;padding:10px}
-/* Overlays */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9;opacity:0;pointer-events:none;transition:.25s}
 .overlay.on{opacity:1;pointer-events:auto}
 .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.85);background:#161616;border:1px solid #c9a84c;border-radius:8px;padding:28px 36px;text-align:center;z-index:10;opacity:0;pointer-events:none;transition:.3s cubic-bezier(.34,1.56,.64,1);width:82vw;max-width:300px}
@@ -59,7 +47,6 @@ canvas{width:100%;height:100%}
 .t-verd{font-size:1.1rem;margin-bottom:4px}.t-verd.w{color:#c9a84c}.t-verd.l{color:#666}
 .t-info{font-size:.75rem;color:#666}
 .t-btn{margin-top:16px;padding:8px 28px;background:none;border:1px solid #c9a84c;color:#c9a84c;font-size:.8rem;letter-spacing:.2em;cursor:pointer;border-radius:3px}
-.syncing{font-size:.6rem;color:#555;text-align:center;padding:4px;letter-spacing:.2em}
 </style>
 </head>
 <body>
@@ -69,12 +56,6 @@ canvas{width:100%;height:100%}
 <div class="bar">
   <div class="name" id="uname">—</div>
   <div class="bal">₽<span id="balv">0</span></div>
-</div>
- 
-<div class="statsbar">
-  <div class="stat"><div class="sv" id="st-spins">0</div><div class="sl">Спинов</div></div>
-  <div class="stat"><div class="sv" id="st-wins">0</div><div class="sl">Побед</div></div>
-  <div class="stat"><div class="sv" id="st-losses">0</div><div class="sl">Проигр.</div></div>
 </div>
  
 <div class="wheel-wrap">
@@ -94,14 +75,6 @@ canvas{width:100%;height:100%}
   <button class="spin" id="spin" disabled>КРУТИТЬ</button>
 </div>
  
-<div class="hist-panel">
-  <div class="label">История ставок</div>
-  <div class="hist-list" id="hist-list">
-    <div class="hist-empty">Нет данных</div>
-  </div>
-</div>
-<div class="syncing" id="syncing"></div>
- 
 <div class="overlay" id="ov"></div>
 <div class="toast" id="toast">
   <div style="font-size:.6rem;color:#555;letter-spacing:.3em;text-transform:uppercase">ВЫПАЛО</div>
@@ -112,267 +85,125 @@ canvas{width:100%;height:100%}
 </div>
  
 <script>
-// ── Telegram WebApp init ─────────────────────────────────────────────────────
-const tg = window.Telegram.WebApp;
-tg.ready(); tg.expand();
-tg.setHeaderColor("#0f0f0f");
-tg.setBackgroundColor("#0f0f0f");
+const tg=window.Telegram.WebApp; tg.ready(); tg.expand();
+tg.setHeaderColor("#0f0f0f"); tg.setBackgroundColor("#0f0f0f");
  
-// ── Constants ────────────────────────────────────────────────────────────────
-const RED = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-const ORD = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-const SC  = 37, SA = Math.PI * 2 / SC;
+const RED=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+const ORD=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+const SC=37,SA=Math.PI*2/SC;
+let bal=0,selNum=null,bet=0,spinning=false,angle=0;
  
-// ── State ────────────────────────────────────────────────────────────────────
-let bal      = 1000;
-let selNum   = null;
-let bet      = 0;
-let spinning = false;
-let angle    = 0;
-let stats    = { spins: 0, wins: 0, losses: 0 };
-let history  = []; // local spin history (last 20)
+const cv=document.getElementById("cv");
+const S=Math.min(window.innerWidth*.8,260);
+cv.width=cv.height=S*2; cv.style.width=cv.style.height=S+"px";
+const cx=cv.getContext("2d"); cx.scale(2,2);
+const C=S/2,R=S/2-4;
  
-// ── Load saved data from start_param (set by bot after each spin) ─────────────
-// URL format: ?tgWebAppStartParam=uid_123_bal_4500
-(function loadFromStartParam() {
-  const sp = tg.initDataUnsafe?.start_param || "";
-  const mBal = sp.match(/bal_(\d+)/);
-  if (mBal) {
-    bal = parseInt(mBal[1], 10);
-    setSyncing("💾 Баланс загружен из базы данных");
-  } else {
-    // Fallback to localStorage if no start_param
-    const saved = localStorage.getItem("rb");
-    if (saved) bal = parseInt(saved, 10) || 1000;
-    setSyncing("⚠️ Открой через /start для синхронизации с БД");
+function col(n){return n===0?["#0d4a20","#5fc"]:RED.has(n)?["#6a1308","#faa"]:["#1c1c1c","#ccc"]}
+ 
+function draw(a){
+  cx.clearRect(0,0,S,S);
+  const rim=cx.createRadialGradient(C,C,R-8,C,C,R+6);
+  rim.addColorStop(0,"#6a4a10");rim.addColorStop(.5,"#c9a84c");rim.addColorStop(1,"#3a2a08");
+  cx.beginPath();cx.arc(C,C,R+6,0,Math.PI*2);cx.fillStyle=rim;cx.fill();
+  for(let i=0;i<SC;i++){
+    const s=a+i*SA-SA/2,e=s+SA,n=ORD[i],[f,t]=col(n);
+    cx.beginPath();cx.moveTo(C,C);cx.arc(C,C,R,s,e);cx.closePath();
+    cx.fillStyle=f;cx.fill();
+    cx.strokeStyle="rgba(201,168,76,.15)";cx.lineWidth=.5;cx.stroke();
+    const m=s+SA/2,tr=R*.8;
+    cx.save();cx.translate(C+tr*Math.cos(m),C+tr*Math.sin(m));
+    cx.rotate(m+Math.PI/2);cx.fillStyle=t;
+    cx.font=`bold ${Math.max(7,S*.042)}px system-ui`;
+    cx.textAlign="center";cx.textBaseline="middle";
+    cx.fillText(n,0,0);cx.restore();
   }
-})();
- 
-// ── Canvas / Wheel ────────────────────────────────────────────────────────────
-const cv = document.getElementById("cv");
-const S  = Math.min(window.innerWidth * 0.8, 260);
-cv.width = cv.height = S * 2;
-cv.style.width = cv.style.height = S + "px";
-const cx = cv.getContext("2d");
-cx.scale(2, 2);
-const C = S / 2, R = S / 2 - 4;
- 
-function col(n) {
-  return n === 0 ? ["#0d4a20","#5fc"] : RED.has(n) ? ["#6a1308","#faa"] : ["#1c1c1c","#ccc"];
-}
- 
-function draw(a) {
-  cx.clearRect(0, 0, S, S);
-  const rim = cx.createRadialGradient(C,C,R-8,C,C,R+6);
-  rim.addColorStop(0,"#6a4a10"); rim.addColorStop(.5,"#c9a84c"); rim.addColorStop(1,"#3a2a08");
-  cx.beginPath(); cx.arc(C,C,R+6,0,Math.PI*2); cx.fillStyle=rim; cx.fill();
-  for (let i = 0; i < SC; i++) {
-    const s = a + i*SA - SA/2, e = s + SA, n = ORD[i], [f,t] = col(n);
-    cx.beginPath(); cx.moveTo(C,C); cx.arc(C,C,R,s,e); cx.closePath();
-    cx.fillStyle = f; cx.fill();
-    cx.strokeStyle = "rgba(201,168,76,.15)"; cx.lineWidth = .5; cx.stroke();
-    const m = s + SA/2, tr = R * .8;
-    cx.save();
-    cx.translate(C + tr*Math.cos(m), C + tr*Math.sin(m));
-    cx.rotate(m + Math.PI/2);
-    cx.fillStyle = t;
-    cx.font = `bold ${Math.max(7, S*.042)}px system-ui`;
-    cx.textAlign = "center"; cx.textBaseline = "middle";
-    cx.fillText(n, 0, 0);
-    cx.restore();
-  }
-  const sg = cx.createRadialGradient(C,C,R*.4,C,C,R*.6);
-  sg.addColorStop(0,"rgba(0,0,0,.6)"); sg.addColorStop(1,"rgba(0,0,0,0)");
-  cx.beginPath(); cx.arc(C,C,R*.6,0,Math.PI*2); cx.fillStyle=sg; cx.fill();
+  const sg=cx.createRadialGradient(C,C,R*.4,C,C,R*.6);
+  sg.addColorStop(0,"rgba(0,0,0,.6)");sg.addColorStop(1,"rgba(0,0,0,0)");
+  cx.beginPath();cx.arc(C,C,R*.6,0,Math.PI*2);cx.fillStyle=sg;cx.fill();
 }
 draw(0);
  
-// ── Number grid ───────────────────────────────────────────────────────────────
-const g = document.getElementById("grid");
-const z = document.createElement("button");
-z.className = "nb z"; z.textContent = "0"; z.dataset.n = 0;
-g.appendChild(z);
-for (let n = 1; n <= 36; n++) {
-  const b = document.createElement("button");
-  b.className = "nb " + (RED.has(n) ? "r" : "b");
-  b.textContent = n; b.dataset.n = n;
-  g.appendChild(b);
-}
-g.addEventListener("click", e => {
-  const b = e.target.closest(".nb");
-  if (!b || spinning) return;
-  document.querySelectorAll(".nb").forEach(x => x.classList.remove("sel"));
-  b.classList.add("sel");
-  selNum = +b.dataset.n;
-  upd();
+const g=document.getElementById("grid");
+const z=document.createElement("button");
+z.className="nb z";z.textContent="0";z.dataset.n=0;g.appendChild(z);
+for(let n=1;n<=36;n++){const b=document.createElement("button");b.className="nb "+(RED.has(n)?"r":"b");b.textContent=n;b.dataset.n=n;g.appendChild(b);}
+g.addEventListener("click",e=>{
+  const b=e.target.closest(".nb");if(!b||spinning)return;
+  document.querySelectorAll(".nb").forEach(x=>x.classList.remove("sel"));
+  b.classList.add("sel");selNum=+b.dataset.n;upd();
 });
  
-// ── Chips ─────────────────────────────────────────────────────────────────────
-[1,5,10,25,100].forEach(v => {
-  const c = document.createElement("button");
-  c.className = `chip c${v}`; c.textContent = v; c.dataset.v = v;
+[1,5,10,25,100].forEach(v=>{
+  const c=document.createElement("button");
+  c.className=`chip c${v}`;c.textContent=v;c.dataset.v=v;
   document.getElementById("chips").appendChild(c);
 });
-document.getElementById("chips").addEventListener("click", e => {
-  const c = e.target.closest(".chip");
-  if (!c || spinning) return;
-  const v = +c.dataset.v;
-  if (v > bal) return;
-  bet = v;
-  document.querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
+document.getElementById("chips").addEventListener("click",e=>{
+  const c=e.target.closest(".chip");if(!c||spinning)return;
+  const v=+c.dataset.v;if(v>bal)return;
+  bet=v;
+  document.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));
   c.classList.add("on");
-  document.getElementById("betv").textContent = bet;
-  upd();
+  document.getElementById("betv").textContent=bet;upd();
 });
  
-// ── UI helpers ────────────────────────────────────────────────────────────────
-function upd() {
-  document.getElementById("spin").disabled = selNum === null || bet === 0 || spinning || bet > bal;
-}
-function updBal() {
-  document.getElementById("balv").textContent = bal.toLocaleString("ru-RU");
-  localStorage.setItem("rb", bal); // local fallback
-}
-function updStats() {
-  document.getElementById("st-spins").textContent   = stats.spins;
-  document.getElementById("st-wins").textContent    = stats.wins;
-  document.getElementById("st-losses").textContent  = stats.losses;
-}
-function setSyncing(msg, timeout = 3000) {
-  const el = document.getElementById("syncing");
-  el.textContent = msg;
-  if (timeout) setTimeout(() => el.textContent = "", timeout);
-}
-function dis(v) {
-  document.querySelectorAll(".nb,.chip").forEach(b => b.disabled = v);
-  document.getElementById("spin").disabled = v;
-}
+function upd(){document.getElementById("spin").disabled=selNum===null||bet===0||spinning||bet>bal;}
+function updBal(){document.getElementById("balv").textContent=bal.toLocaleString("ru-RU");localStorage.setItem("rb",bal);}
  
-// ── History ───────────────────────────────────────────────────────────────────
-function addToHistory(entry) {
-  history.unshift(entry);
-  if (history.length > 20) history.pop();
-  renderHistory();
-}
-function renderHistory() {
-  const list = document.getElementById("hist-list");
-  if (!history.length) {
-    list.innerHTML = '<div class="hist-empty">Нет данных</div>';
-    return;
-  }
-  list.innerHTML = history.map(h => {
-    const cls  = h.won ? "hw" : "hl";
-    const res  = h.won ? `+${h.payout}` : `-${h.bet}`;
-    const time = h.spun_at ? h.spun_at.slice(11, 16) : "";
-    return `<div class="hist-row">
-      <span style="color:#555">${time}</span>
-      <span>${h.chosen} → <b>${h.number}</b></span>
-      <span class="${cls}">${res}</span>
-      <span style="color:#888">💰${h.balance_after.toLocaleString("ru-RU")}</span>
-    </div>`;
-  }).join("");
-}
- 
-// ── Spin ──────────────────────────────────────────────────────────────────────
-document.getElementById("spin").addEventListener("click", () => {
-  if (spinning || selNum === null || bet === 0 || bet > bal) return;
-  spinning = true;
-  bal -= bet;
-  updBal();
-  dis(true);
- 
-  const win = Math.floor(Math.random() * 37);
-  const idx = ORD.indexOf(win);
-  const fa  = (-Math.PI/2 - idx*SA - SA/2) - (4 + Math.random()*2) * Math.PI * 2;
-  const sa  = angle, t0 = performance.now();
-  const ease = t => 1 - Math.pow(1 - t, 4);
- 
-  (function frame(now) {
-    const t = Math.min((now - t0) / 6000, 1);
-    angle = sa + (fa - sa) * ease(t);
-    draw(angle);
-    if (t < 1) requestAnimationFrame(frame);
-    else { angle = fa; draw(angle); spinning = false; result(win); }
+document.getElementById("spin").addEventListener("click",()=>{
+  if(spinning||selNum===null||bet===0||bet>bal)return;
+  spinning=true;bal-=bet;updBal();dis(true);
+  const win=Math.floor(Math.random()*37);
+  const idx=ORD.indexOf(win);
+  const fa=(-Math.PI/2-idx*SA-SA/2)-(4+Math.random()*2)*Math.PI*2;
+  const sa=angle,t0=performance.now();
+  const ease=t=>1-Math.pow(1-t,4);
+  (function frame(now){
+    const t=Math.min((now-t0)/6000,1);
+    angle=sa+(fa-sa)*ease(t);draw(angle);
+    if(t<1)requestAnimationFrame(frame);
+    else{angle=fa;draw(angle);spinning=false;result(win);}
   })(t0);
 });
  
-// ── Result ────────────────────────────────────────────────────────────────────
-function result(win) {
-  const won    = win === selNum;
-  const payout = won ? bet * 36 : 0;
- 
-  if (won) { bal += payout; }
-  updBal();
- 
-  // Local stats update (will be confirmed by bot)
-  stats.spins++;
-  if (won) stats.wins++; else stats.losses++;
-  updStats();
- 
-  // Add to local history
-  const now = new Date().toISOString();
-  const entry = {
-    spun_at: now, bet, chosen: selNum, number: win,
-    won, payout, balance_after: bal,
-  };
-  addToHistory(entry);
- 
-  // Show toast
-  document.getElementById("tnum").textContent = win;
-  document.getElementById("tnum").className = "t-num " + (won ? "w" : "l");
-  document.getElementById("tverd").textContent = won ? "🏆 Победа!" : "Не повезло";
-  document.getElementById("tverd").className = "t-verd " + (won ? "w" : "l");
-  document.getElementById("tinfo").textContent = won
-    ? `+₽${payout.toLocaleString("ru-RU")} (ставка ×36)`
-    : `Ставили на ${selNum}, выпало ${win}`;
+function result(win){
+  const won=win===selNum,pay=won?bet*36:0;
+  if(won){bal+=pay;updBal();}
+  window._pr={bet,won,pay,number:win,chosen:selNum};
+  document.getElementById("tnum").textContent=win;
+  document.getElementById("tnum").className="t-num "+(won?"w":"l");
+  document.getElementById("tverd").textContent=won?"🏆 Победа!":"Не повезло";
+  document.getElementById("tverd").className="t-verd "+(won?"w":"l");
+  document.getElementById("tinfo").textContent=won?`+₽${pay.toLocaleString("ru-RU")} (ставка ×36)`:`Ставили на ${selNum}, выпало ${win}`;
   document.getElementById("ov").classList.add("on");
   document.getElementById("toast").classList.add("on");
- 
-  window._pr = { bet, won, payout, number: win, chosen: selNum };
 }
  
-// ── Continue button ───────────────────────────────────────────────────────────
-document.getElementById("tbtn").addEventListener("click", () => {
+document.getElementById("tbtn").addEventListener("click",()=>{
   document.getElementById("ov").classList.remove("on");
   document.getElementById("toast").classList.remove("on");
- 
-  if (window._pr) {
-    const r = window._pr;
-    // Send result to bot → bot updates SQLite DB
-    const payload = JSON.stringify({
-      action:   "spin_result",
-      bet:      r.bet,
-      won:      r.won,
-      payout:   r.payout,
-      number:   r.number,
-      chosen:   r.chosen,
-      new_balance: bal,
-    });
-    tg.sendData(payload);
-    setSyncing("🔄 Синхронизация с базой данных...", 4000);
-    window._pr = null;
+  if(window._pr){
+    const r=window._pr,p=JSON.stringify({action:"spin_result",bet:r.bet,won:r.won,payout:r.pay,number:r.number,chosen:r.chosen,new_balance:bal});
+    tg.MainButton.setText("Сохранить результат");tg.MainButton.show();
+    tg.MainButton.onClick(()=>{tg.sendData(p);tg.MainButton.hide();});
+    window._pr=null;
   }
- 
-  selNum = null; bet = 0;
-  document.querySelectorAll(".nb").forEach(b => b.classList.remove("sel"));
-  document.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
-  document.getElementById("betv").textContent = 0;
-  dis(false); upd();
- 
-  // If broke — ask bot for refill
-  if (bal <= 0) {
-    tg.sendData(JSON.stringify({ action: "refill_request" }));
-    setSyncing("💸 Баланс исчерпан, запрос на пополнение отправлен...", 5000);
-  }
+  selNum=null;bet=0;
+  document.querySelectorAll(".nb").forEach(b=>b.classList.remove("sel"));
+  document.querySelectorAll(".chip").forEach(c=>c.classList.remove("on"));
+  document.getElementById("betv").textContent=0;
+  dis(false);upd();
+  if(bal<=0){bal=100;updBal();}
 });
  
-// ── Init ──────────────────────────────────────────────────────────────────────
-const u = tg.initDataUnsafe?.user;
-document.getElementById("uname").textContent = u?.first_name || u?.username || "Игрок";
-updBal();
-updStats();
-renderHistory();
-upd();
+function dis(v){document.querySelectorAll(".nb,.chip").forEach(b=>b.disabled=v);document.getElementById("spin").disabled=v;}
+ 
+const u=tg.initDataUnsafe?.user;
+document.getElementById("uname").textContent=u?.first_name||u?.username||"Игрок";
+const sp=tg.initDataUnsafe?.start_param;
+bal=sp?.startsWith("bal_")?+sp.replace("bal_",""):+localStorage.getItem("rb")||1000;
+updBal();upd();
 </script>
 </body>
 </html>
